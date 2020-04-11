@@ -1,15 +1,23 @@
 import React, { Component } from 'react'
 import { 
     View, Text, StyleSheet, TouchableWithoutFeedback, 
-    Image, Modal, ImageBackground, BackHandler
+    Image, Modal, ImageBackground, BackHandler, 
+    Animated, Easing
 } from 'react-native'
 import Orientation from 'react-native-orientation-locker'
 import Icon from 'react-native-vector-icons/Fontisto'
 import Sound from 'react-native-sound'
 import Lives from './Lives'
+import Trophies from './Trophies'
 // import GameOver from './GameOver'
 import CloseApp from './CloseApp'
+import HighScores from './HighScores'
 import AsyncStorage from '@react-native-community/async-storage'
+
+//animations
+import Animation from 'lottie-react-native'
+import trophy from '../assets/lottie/trophy.json'
+import spider from '../assets/lottie/spider.json'
 
 const cupImage = require('../assets/images/cup.png')
 const cupWrong = require('../assets/images/cup-wrong.png')
@@ -23,6 +31,8 @@ const sndYes = '../assets/sounds/got-it.mp3'
 const sndNo = '../assets/sounds/errou.mp3'
 const sndLive = '../assets/sounds/vida.mp3'
 const sndGameOver = '../assets/sounds/game-over.mp3'
+const sndBoing = '../assets/sounds/boing.wav'
+const sndSpider = '../assets/sounds/spider.mp3'
 
 const initialState = {
     yourScore: 0,
@@ -38,6 +48,7 @@ const initialState = {
     gameOver: false,
     highScore: 0,
     modalCloseApp: false,
+    modalHighScores: false,
 }
 
 //background music
@@ -65,13 +76,24 @@ let effectYes = new Sound(require(sndYes), (error) => {})
 let effectNo  = new Sound(require(sndNo), (error) => {})
 let effectLive  = new Sound(require(sndLive), (error) => {})
 let effectGameOver  = new Sound(require(sndGameOver), (error) => {})
+let effectBoing  = new Sound(require(sndBoing), (error) => {})
+let effectSpider  = new Sound(require(sndSpider), (error) => {})
 effectYes.setVolume(1)
 effectNo.setVolume(1)
 effectLive.setVolume(1)
 effectGameOver.setVolume(1)
+effectBoing.setVolume(1)
+effectSpider.setVolume(1)
 
 
 export default class Game extends Component {
+
+    constructor() {
+        super()
+        this.animateValue = new Animated.Value(0)
+        this.springValue = new Animated.Value(1)
+        this.riseValue = new Animated.Value(0)
+    }
 
     state = {
         ...initialState
@@ -80,10 +102,14 @@ export default class Game extends Component {
     async componentDidMount() {
         Orientation.lockToLandscape()
 
+        this.animate()
+
         const stateString = await AsyncStorage.getItem('luizaState')
         const state = JSON.parse(stateString) || initialState
         this.setState(state)
 
+        this.setState({modalCloseApp: false})
+        this.setState({modalHighScores: false})
         this.newGame()
 
     }
@@ -240,12 +266,72 @@ export default class Game extends Component {
         this.syncState()
     }
 
+    spring() {
+        this.springValue.setValue(0.8)
+        Animated.spring(
+            this.springValue,
+            {
+                toValue: 1,
+                friction: 1,
+                useNativeDriver: false
+            }
+        ).start()
+    }
+
+    rise() {
+        this.riseValue.setValue(0)
+        Animated.timing(
+            this.riseValue,
+            {
+                toValue: 1,
+                duration: 500,
+                easing: Easing.linear,
+                useNativeDriver: false
+            }
+        ).start()
+    }
+
+    animate() {
+        this.animateValue.setValue(0)
+        Animated.timing(
+            this.animateValue,
+            {
+                toValue: 1,
+                duration: 4000,
+                easing: Easing.linear,
+                useNativeDriver: false
+            }
+        ).start(() => this.animate())
+    }
+
     render() {
+
+        const titleSize = this.animateValue.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: [40, 35, 40]
+        })
+
+        const titleMargin = this.animateValue.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: [0, 30, 0]
+        })
+
+        const cupMargin = this.animateValue.interpolate({
+            inputRange: [0, 0.5, 1],
+            outputRange: [0, 30, 0]
+        })
+
         return(
             <ImageBackground source={wallpaper} resizeMode="stretch" 
             style={styles.wallpaper}>
             <View style={styles.myContainer}>
                   
+                <HighScores visible={this.state.modalHighScores} 
+                    onCancel={() => {
+                        console.log("vamos fechar?")
+                        this.setState({modalHighScores:false})
+                    }} />
+
                 <CloseApp visible={this.state.modalCloseApp} 
                 onBaby={this.newGame}
                 onCancel={() => this.setState({modalCloseApp:false})} />
@@ -259,15 +345,52 @@ export default class Game extends Component {
                         <TouchableWithoutFeedback onPress={() => {
                             this.newGame(true)
                         }}>
-                        <Text>
-                            <Text style={styles.modalText}>Fim de Jogo</Text>
+                        <Text style={{textAlign: 'center'}}>
+                            <Text style={styles.modalText}>Fim de Jogo{'\n'}
+                            
+                            <Animation 
+                            style={{
+                                width: 60,
+                                height: 60,
+                            }}
+                            autoPlay loop
+                            source={trophy}
+                            />
+                            &nbsp;= {this.state.yourScore}
+                            </Text>
                         </Text>
                         </TouchableWithoutFeedback>
                     </View>
                 </Modal>
             
+                <View style={styles.spiderView}>
+                    <TouchableWithoutFeedback onPress={() => {
+                        this.state.effectsOn && effectSpider.play()
+                    }}>
+                    <Animation
+                        style={{
+                            width: 120,
+                            height: 120,
+                        }}
+                        autoPlay loop
+                        source={spider}
+                    />
+                    </TouchableWithoutFeedback>
+                </View>
+
+
                 <View style={styles.detectiveView}>
-                    <Image source={detectiveImage} style={styles.detectiveImage}></Image>
+                    <TouchableWithoutFeedback onPress={() => {
+                        this.spring()
+                        this.state.effectsOn && effectBoing.play()
+                    }}>
+                    <Animated.Image source={detectiveImage} 
+                    style={{
+                        width: 110,
+                        height: 140,
+                        transform: [{scale: this.springValue}]
+                    }}></Animated.Image>
+                    </TouchableWithoutFeedback>
                 </View>
 
                 <View style={styles.volumeIconsView}>
@@ -296,33 +419,58 @@ export default class Game extends Component {
                 </View>
 
                 <View style={styles.myHeader}>
-                    <Text style={styles.myTitle}>Onde Está Luiza?</Text>
+                    <Animated.Text style={{
+                        marginLeft: titleMargin,
+                        color: '#fff',
+                        fontSize: 40,
+                        fontFamily: 'BowlbyOneSC-Regular',
+                        textShadowColor: '#000',
+                        textShadowRadius: 20,
+                        textShadowOffset: {width: 2, height: 2},
+                    }}>Onde Está Luiza?
+                    </Animated.Text>
                 </View>
 
                 <View style={styles.myScore}>
-                    <View style={styles.scoreItem}>
-                        <Text style={styles.scoreText}>Acertos: {this.state.yourScore}</Text>
-                        </View>
-                    <View style={styles.scoreItem}>
+                    <View style={[styles.scoreItem, {
+                        flex: 1,
+                        flexDirection: 'row', 
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        marginRight: 20,
+                        }]}>
+                        <Trophies number={this.state.yourScore} />
+                    </View>
+                    {/* <View style={styles.scoreItem}>
                         <TouchableWithoutFeedback
                         underlayColor={themeBackground}
                         onPress={() => this.newGame(true)}>
                             <Text style={styles.butNewGame}>Novo Jogo</Text>
                         </TouchableWithoutFeedback>
-                        </View>
-                    <View style={styles.scoreItem}>
-                        <Text style={styles.scoreText}>Vidas: <Lives number={this.state.lives} /></Text>
+                        </View> */}
+                    <View style={[styles.scoreItem, {
+                        flex: 1,
+                        flexDirection: 'row',
+                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        marginLeft: 20,
+                        }]}>
+                        <Lives number={this.state.lives} />
                         </View>
                 </View>
                 <View style={styles.myBoard}>
                     <View style={styles.boardItem}>
                         <TouchableWithoutFeedback  
                         underlayColor={themeBackground}
-                        onPress={ () => { this.checkCup(0) }}
+                        onPress={ () => {
+                             this.checkCup(0) 
+                        }}
                         >
-                            <Image 
-                                style={styles.cup}
-                                source={this.state.imgCupLeft} ></Image>
+                            <Animated.Image 
+                                style={{
+                                    width: 80,
+                                    height: 120,
+                                    marginBottom: cupMargin,
+                                }}
+                                source={this.state.imgCupLeft} ></Animated.Image>
                         </TouchableWithoutFeedback>
                     </View>
                     <View style={styles.boardItem}>
@@ -330,9 +478,13 @@ export default class Game extends Component {
                         underlayColor={themeBackground}
                         onPress={ () => { this.checkCup(1) }}
                         >
-                            <Image 
-                                style={styles.cup}
-                                source={this.state.imgCupCenter} ></Image>
+                            <Animated.Image 
+                                style={{
+                                    width: 80,
+                                    height: 120,
+                                    marginBottom: cupMargin,
+                                }}
+                                source={this.state.imgCupCenter} ></Animated.Image>
                         </TouchableWithoutFeedback>
                     </View>
                     <View style={styles.boardItem}>
@@ -340,15 +492,23 @@ export default class Game extends Component {
                         underlayColor={themeBackground}
                         onPress={ () => { this.checkCup(2) }}
                         >
-                            <Image 
-                                style={styles.cup}
-                                source={this.state.imgCupRight} ></Image>
+                            <Animated.Image 
+                                style={{
+                                    width: 80,
+                                    height: 120,
+                                    marginBottom: cupMargin,
+                                }}
+                                source={this.state.imgCupRight} ></Animated.Image>
                         </TouchableWithoutFeedback>
                     </View>
                 </View>
 
                 <View style={styles.highScoreView}>
-                    <Text style={styles.textHighScore}>Recorde: {this.state.highScore}</Text>
+                    <TouchableWithoutFeedback onPress={() => {
+                        this.setState({modalHighScores: true})
+                    }}>
+                    <Text style={styles.textHighScore}>Hall da Fama | Recorde: {this.state.highScore}</Text>
+                    </TouchableWithoutFeedback>
                 </View>
             </View>
             </ImageBackground>
@@ -384,8 +544,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 40,
         fontFamily: 'BowlbyOneSC-Regular',
-        // fontWeight: "bold",
-        // textTransform: "uppercase",
         textShadowColor: '#000',
         textShadowRadius: 20,
         textShadowOffset: {width: 2, height: 2},
@@ -425,13 +583,18 @@ const styles = StyleSheet.create({
     detectiveView: {
         position: "absolute",
         bottom: 0,
-        left: 0,
+        left: 10,
         marginBottom: 20,
     },
     detectiveImage: {
         width: 110,
         height: 140,
         opacity: 1,
+    },
+    spiderView: {
+        position: "absolute",
+        top: 0,
+        left: 20,
     },
     volumeIconsView: {
         position: "absolute",
@@ -454,9 +617,10 @@ const styles = StyleSheet.create({
         justifyContent: "center"
     },
     highScoreView: {
+        flexDirection: 'row',
         position: "absolute",
-        right: 0,
-        bottom: 0,
+        right: 10,
+        bottom: 10,
         padding: 10,
         marginRight: 10,
     }, 
