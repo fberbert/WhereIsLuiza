@@ -14,6 +14,23 @@ const titleMargin = animateValue.interpolate({
     outputRange: [0, 30, 0]
 })
 
+//fetch da lista
+var dataSource = []
+export async function getData() {
+
+    var myHeaders = new Headers();
+    myHeaders.append('pragma', 'no-cache');
+    myHeaders.append('cache-control', 'no-cache');
+    myHeaders.append('charset', 'utf-8');
+
+    fetch('https://www.vivaolinux.com.br/publico/WhereIsLuiza/index.php',{method: "GET", headers: myHeaders})
+        .then((response) => response.text())
+        .then((responseData) => {
+            // console.log('entrei getData: ' + JSON.parse(responseData)[0]['name'])
+            dataSource = JSON.parse(responseData)
+        })
+}
+
 function animate() {
     animateValue.setValue(0)
     Animated.timing(
@@ -27,21 +44,25 @@ function animate() {
     ).start(() => animate())
 }
 
+getData()
+
 export default function HighScores(props) {
     // const [isVisible, setVisible] = useState(props.visible)
 
-    const players = [
-        {"id": 1, "rank": 1, "name": "Luiza", "score": 10},
-        {"id": 3, "rank": 2, "name": "Papai da Luiza", "score": 8},
-        {"id": 2, "rank": 3, "name": "Juliana", "score": 7},
-        {"id": 4, "rank": 4, "name": "Vó Nani", "score": 7},
-        {"id": 6, "rank": 5, "name": "Dinda", "score": 6},
-        {"id": 5, "rank": 6, "name": "Tia Jaque", "score": 5},
-        {"id": 8, "rank": 7, "name": "Maria", "score": 4},
-        {"id": 7, "rank": 8, "name": "Tio Daniel", "score": 4},
-        {"id": 9, "rank": 9, "name": "Lucas Neto", "score": 3},
-        {"id": 10, "rank": 10, "name": "Ana da Frozen", "score": 1},
-]
+    // console.log("dentro: " + dataSource)
+    // const players = [
+    //     {"id": 1, "rank": 1, "name": "Luiza", "score": 10},
+    //     {"id": 3, "rank": 2, "name": "Papai da Luiza", "score": 8},
+    //     {"id": 2, "rank": 3, "name": "Juliana", "score": 7},
+    //     {"id": 4, "rank": 4, "name": "Vó Nani", "score": 7},
+    //     {"id": 6, "rank": 5, "name": "Dinda", "score": 6},
+    //     {"id": 5, "rank": 6, "name": "Tia Jaque", "score": 5},
+    //     {"id": 8, "rank": 7, "name": "Maria", "score": 4},
+    //     {"id": 7, "rank": 8, "name": "Tio Daniel", "score": 4},
+    //     {"id": 9, "rank": 9, "name": "Lucas Neto", "score": 3},
+    //     {"id": 10, "rank": 10, "name": "Ana da Frozen", "score": 1},
+    // ]
+
 
        const PlayerItem = props =>
         <View style={{
@@ -71,6 +92,7 @@ export default function HighScores(props) {
         </View>
 
     const renderItem = ({ item }) => {
+        // console.log("render:" + item)
         return <PlayerItem {...item} />
     }
 
@@ -117,19 +139,18 @@ export default function HighScores(props) {
                     <View style={{flex: 1, alignItems: 'center'}}><Text style={[styles.rankItem, {fontSize: 15}]}>PONTOS</Text></View>
                 </View>
 
-                {/* <ScrollView style={{width: '80%'}}> */}
-                    <FlatList data={players} renderItem={renderItem}
-                         style={{
-                            width: '80%',
-                            backgroundColor: 'rgba(0,0,0,0.3)',
-                            paddingTop: 5,
-                         }}
-                        keyExtractor={(_, index) => index.toString()} />
-                {/* </ScrollView> */}
+                <FlatList data={dataSource} renderItem={renderItem}
+                        style={{
+                        width: '80%',
+                        backgroundColor: 'rgba(0,0,0,0.3)',
+                        paddingTop: 5,
+                        }}
+                    keyExtractor={(_, index) => index.toString()} />
 
                 <View style={styles.closeView}>
                     <TouchableWithoutFeedback onPress={() => {
                         props.onCancel()
+                        getData()
                         console.log("fechar...")
                     }}>
                         <Icon name="home" size={30} style={{color: "#ffffff" }} />

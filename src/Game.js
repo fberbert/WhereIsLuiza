@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { 
     View, Text, StyleSheet, TouchableWithoutFeedback, 
     Image, Modal, ImageBackground, BackHandler, 
-    Animated, Easing
+    Animated, Easing, TextInput
 } from 'react-native'
 import Orientation from 'react-native-orientation-locker'
 import Icon from 'react-native-vector-icons/Fontisto'
@@ -11,7 +11,7 @@ import Lives from './Lives'
 import Trophies from './Trophies'
 // import GameOver from './GameOver'
 import CloseApp from './CloseApp'
-import HighScores from './HighScores'
+// import HighScores, { getData } from './HighScores'
 import AsyncStorage from '@react-native-community/async-storage'
 
 //animations
@@ -19,12 +19,13 @@ import Animation from 'lottie-react-native'
 import trophy from '../assets/lottie/trophy.json'
 import spider from '../assets/lottie/spider.json'
 
-const cupImage = require('../assets/images/cup.png')
-const cupWrong = require('../assets/images/cup-wrong.png')
-const luizaHead = require('../assets/images/luizaHead.png')
+const cupImage = require('../assets/images/cup-resized.png')
+const cupWrong = require('../assets/images/cup-wrong-resized.png')
+const luizaHead = require('../assets/images/luizaHead-draw.png')
 const detectiveImage = require('../assets/images/detective-original.png')
 const empty = require('../assets/images/1px.png')
 const wallpaper = require('../assets/images/forest-background.jpg')
+const wallpaperEnd = require('../assets/images/forest-background2.jpg')
 const themeBackground = '#FF92B2'
 const music = '../assets/sounds/forest.mp3'
 const sndYes = '../assets/sounds/got-it.mp3'
@@ -49,27 +50,15 @@ const initialState = {
     highScore: 0,
     modalCloseApp: false,
     modalHighScores: false,
+    playerName: '',
 }
 
 //background music
 Sound.setCategory('Playback')
-let myMusic = new Sound(require(music), (error) => {
 
-    if (error) {
-        console.log('failed to load the sound', error)
-    }
-
-    // myMusic.play((success) => {
-    // if (success) {
-    //         console.log('successfully finished playing')
-    //     } else {
-    //         console.log('playback failed due to audio decoding errors')
-    //         this.setState({musicOn: false})
-    //     }
-    // })
-    myMusic.setNumberOfLoops(-1)
-    myMusic.setVolume(0.2)
-})
+let myMusic = new Sound(require(music), (error) => {})
+myMusic.setNumberOfLoops(-1)
+myMusic.setVolume(0.2)
 
 //sound effects
 let effectYes = new Sound(require(sndYes), (error) => {})
@@ -112,6 +101,7 @@ export default class Game extends Component {
         this.setState({modalHighScores: false})
         this.newGame()
 
+        this.state.musicOn && myMusic.play()
     }
 
     componentWillUnmount() {
@@ -126,8 +116,36 @@ export default class Game extends Component {
 
     closeApp() {
         this.syncState()
+        myMusic.stop()
+        myMusic.release()
         BackHandler.exitApp()
     }
+
+    // async saveHighScore() {
+
+    //     let myHeaders = new Headers();
+    //     myHeaders.append('pragma', 'no-cache');
+    //     myHeaders.append('cache-control', 'no-cache');
+    //     myHeaders.append('charset', 'utf-8');
+
+    //     let formData = new FormData();
+    //     formData.append('name', encodeURI(this.state.playerName));
+    //     formData.append('score', this.state.yourScore)
+
+    //     fetch(
+    //         'http://187.84.229.156:8040/publico/WhereIsLuiza/index.php',
+    //         {
+    //             method: "POST",
+    //             headers: myHeaders,
+    //             body: formData
+    //         })
+    //         .then((response) => response.text())
+    //         .then((responseData) => {
+    //             console.log("retorno do post: " + responseData)
+    //         })
+
+    //     getData()
+    // }
 
     newGame(isReset) {
 
@@ -251,9 +269,13 @@ export default class Game extends Component {
         let musicOn = !this.state.musicOn
 
         if (musicOn) {
+            myMusic = new Sound(require(music), (error) => {})
+            myMusic.setVolume(0.2)
             myMusic.play()
         } else {
-            myMusic.pause()
+            // myMusic.pause()
+            myMusic.stop()
+            myMusic.release()
         }
 
         this.setState({musicOn})
@@ -326,32 +348,46 @@ export default class Game extends Component {
             style={styles.wallpaper}>
             <View style={styles.myContainer}>
                   
-                <HighScores visible={this.state.modalHighScores} 
+                {/* <HighScores visible={this.state.modalHighScores} 
                     onCancel={() => {
                         console.log("vamos fechar?")
                         this.setState({modalHighScores:false})
-                    }} />
+                    }} /> */}
 
                 <CloseApp visible={this.state.modalCloseApp} 
                 onBaby={this.newGame}
                 onCancel={() => this.setState({modalCloseApp:false})} />
 
+                {/* Modal fim de jogo */}
                 <Modal 
                 visible={this.state.gameOver}
                 transparent={true}
                 animationType="slide"
                 >
-                    <View style={styles.modalView}>
+
+            {/* <ImageBackground source={wallpaperEnd} resizeMode="stretch" 
+            style={styles.wallpaper}> */}
+
+                    <View style={[styles.modalView,
+                        {
+                            // backgroundColor: 'none',
+                            opacity: 0.8,
+                            flexDirection: 'column',
+                            flex: 2,
+                    }
+                    ]}>
                         <TouchableWithoutFeedback onPress={() => {
+                            // this.saveHighScore()
                             this.newGame(true)
                         }}>
+ 
                         <Text style={{textAlign: 'center'}}>
                             <Text style={styles.modalText}>Fim de Jogo{'\n'}
                             
                             <Animation 
                             style={{
-                                width: 60,
-                                height: 60,
+                                width: 45,
+                                height: 45,
                             }}
                             autoPlay loop
                             source={trophy}
@@ -360,7 +396,40 @@ export default class Game extends Component {
                             </Text>
                         </Text>
                         </TouchableWithoutFeedback>
+
+                        {/* <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center'
+                        }}>
+                            <TextInput placeholder="Digite seu nome" 
+                            value={this.state.playerName} 
+                            onChangeText={(playerName) => {
+                                this.setState({playerName})
+                            }}
+                            autoCompleteType="name"
+                            placeholderTextColor="#c0c0c0"
+                            selectionColor="#c0c0c0"
+                            style={{
+                                borderColor: "#c0c0c0",
+                                borderWidth: 0.5,
+                                width: 250,
+                                color: '#c0c0c0',
+                                paddingLeft: 20,
+                                fontSize: 20,
+                                fontFamily: 'FredokaOne-Regular',
+                                marginRight: 10,
+                            }}
+                            />
+                           <Icon name="save" size={40} 
+                            style={{
+                                color: '#fff'
+                            }} />
+                            </View> */}
+ 
                     </View>
+                {/* </ImageBackground> */}
+
+
                 </Modal>
             
                 <View style={styles.spiderView}>
@@ -466,7 +535,7 @@ export default class Game extends Component {
                         >
                             <Animated.Image 
                                 style={{
-                                    width: 80,
+                                    width: 117,
                                     height: 120,
                                     marginBottom: cupMargin,
                                 }}
@@ -480,7 +549,7 @@ export default class Game extends Component {
                         >
                             <Animated.Image 
                                 style={{
-                                    width: 80,
+                                    width: 117,
                                     height: 120,
                                     marginBottom: cupMargin,
                                 }}
@@ -494,7 +563,7 @@ export default class Game extends Component {
                         >
                             <Animated.Image 
                                 style={{
-                                    width: 80,
+                                    width: 117,
                                     height: 120,
                                     marginBottom: cupMargin,
                                 }}
@@ -504,11 +573,11 @@ export default class Game extends Component {
                 </View>
 
                 <View style={styles.highScoreView}>
-                    <TouchableWithoutFeedback onPress={() => {
+                    {/* <TouchableWithoutFeedback onPress={() => {
                         this.setState({modalHighScores: true})
                     }}>
-                    <Text style={styles.textHighScore}>Hall da Fama | Recorde: {this.state.highScore}</Text>
-                    </TouchableWithoutFeedback>
+                    </TouchableWithoutFeedback> */}
+                    <Text style={styles.textHighScore}>Recorde: {this.state.highScore}</Text>
                 </View>
             </View>
             </ImageBackground>
@@ -640,7 +709,7 @@ const styles = StyleSheet.create({
     },
     modalText: {
         color: '#fff',
-        fontSize: 60,
+        fontSize: 45,
         fontFamily: 'FredokaOne-Regular',
         textTransform: 'uppercase',
     }
