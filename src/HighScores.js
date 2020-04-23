@@ -151,7 +151,7 @@ export default function HighScores(props) {
                     <TouchableWithoutFeedback onPress={() => {
                         props.onCancel()
                         getData()
-                        console.log("fechar...")
+                        // console.log("fechar...")
                     }}>
                         <Icon name="home" size={30} style={{color: "#ffffff" }} />
                     </TouchableWithoutFeedback>

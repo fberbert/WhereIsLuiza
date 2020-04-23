@@ -11,8 +11,9 @@ import Lives from './Lives'
 import Trophies from './Trophies'
 // import GameOver from './GameOver'
 import CloseApp from './CloseApp'
-// import HighScores, { getData } from './HighScores'
+import HighScores, { getData } from './HighScores'
 import AsyncStorage from '@react-native-community/async-storage'
+import cssValues from './cssValues'
 
 //animations
 import Animation from 'lottie-react-native'
@@ -121,31 +122,31 @@ export default class Game extends Component {
         BackHandler.exitApp()
     }
 
-    // async saveHighScore() {
+    async saveHighScore() {
 
-    //     let myHeaders = new Headers();
-    //     myHeaders.append('pragma', 'no-cache');
-    //     myHeaders.append('cache-control', 'no-cache');
-    //     myHeaders.append('charset', 'utf-8');
+        let myHeaders = new Headers();
+        myHeaders.append('pragma', 'no-cache');
+        myHeaders.append('cache-control', 'no-cache');
+        myHeaders.append('charset', 'utf-8');
 
-    //     let formData = new FormData();
-    //     formData.append('name', encodeURI(this.state.playerName));
-    //     formData.append('score', this.state.yourScore)
+        let formData = new FormData();
+        formData.append('name', encodeURI(this.state.playerName));
+        formData.append('score', this.state.yourScore)
 
-    //     fetch(
-    //         'http://187.84.229.156:8040/publico/WhereIsLuiza/index.php',
-    //         {
-    //             method: "POST",
-    //             headers: myHeaders,
-    //             body: formData
-    //         })
-    //         .then((response) => response.text())
-    //         .then((responseData) => {
-    //             console.log("retorno do post: " + responseData)
-    //         })
+        fetch(
+            'http://187.84.229.156:8040/publico/WhereIsLuiza/index.php',
+            {
+                method: "POST",
+                headers: myHeaders,
+                body: formData
+            })
+            .then((response) => response.text())
+            .then((responseData) => {
+                // console.log("retorno do post: " + responseData)
+            })
 
-    //     getData()
-    // }
+        getData()
+    }
 
     newGame(isReset) {
 
@@ -348,11 +349,11 @@ export default class Game extends Component {
             style={styles.wallpaper}>
             <View style={styles.myContainer}>
                   
-                {/* <HighScores visible={this.state.modalHighScores} 
+                <HighScores visible={this.state.modalHighScores} 
                     onCancel={() => {
-                        console.log("vamos fechar?")
+                        // console.log("vamos fechar?")
                         this.setState({modalHighScores:false})
-                    }} /> */}
+                    }} />
 
                 <CloseApp visible={this.state.modalCloseApp} 
                 onBaby={this.newGame}
@@ -376,11 +377,6 @@ export default class Game extends Component {
                             flex: 2,
                     }
                     ]}>
-                        <TouchableWithoutFeedback onPress={() => {
-                            // this.saveHighScore()
-                            this.newGame(true)
-                        }}>
- 
                         <Text style={{textAlign: 'center'}}>
                             <Text style={styles.modalText}>Fim de Jogo{'\n'}
                             
@@ -395,9 +391,8 @@ export default class Game extends Component {
                             &nbsp;= {this.state.yourScore}
                             </Text>
                         </Text>
-                        </TouchableWithoutFeedback>
 
-                        {/* <View style={{
+                        <View style={{
                             flexDirection: 'row',
                             alignItems: 'center'
                         }}>
@@ -416,15 +411,23 @@ export default class Game extends Component {
                                 color: '#c0c0c0',
                                 paddingLeft: 20,
                                 fontSize: 20,
-                                fontFamily: 'FredokaOne-Regular',
+                                fontFamily: cssValues.defaultFontFamily,
                                 marginRight: 10,
                             }}
                             />
+                         <TouchableWithoutFeedback onPress={() => {
+                            this.saveHighScore()
+                            this.newGame(true)
+                        }}>
+
+
                            <Icon name="save" size={40} 
                             style={{
                                 color: '#fff'
                             }} />
-                            </View> */}
+
+                        </TouchableWithoutFeedback>
+                            </View> 
  
                     </View>
                 {/* </ImageBackground> */}
@@ -573,11 +576,11 @@ export default class Game extends Component {
                 </View>
 
                 <View style={styles.highScoreView}>
-                    {/* <TouchableWithoutFeedback onPress={() => {
+                    <TouchableWithoutFeedback onPress={() => {
                         this.setState({modalHighScores: true})
                     }}>
-                    </TouchableWithoutFeedback> */}
-                    <Text style={styles.textHighScore}>Recorde: {this.state.highScore}</Text>
+                    <Text style={styles.textHighScore}>Hall da Fama | Recorde: {this.state.highScore}</Text>
+                    </TouchableWithoutFeedback>
                 </View>
             </View>
             </ImageBackground>
@@ -612,7 +615,7 @@ const styles = StyleSheet.create({
     myTitle: {
         color: '#fff',
         fontSize: 40,
-        fontFamily: 'BowlbyOneSC-Regular',
+        fontFamily: cssValues.titleFontFamily,
         textShadowColor: '#000',
         textShadowRadius: 20,
         textShadowOffset: {width: 2, height: 2},
@@ -632,7 +635,7 @@ const styles = StyleSheet.create({
         height: 120,
     },
     scoreText: {
-        fontFamily: 'FredokaOne-Regular',
+        fontFamily: cssValues.defaultFontFamily,
         fontSize: 20,
         color: '#fff',
         backgroundColor: 'rgba(0, 5, 5, 0.6)',
@@ -640,7 +643,7 @@ const styles = StyleSheet.create({
     },
     butNewGame: {
         fontSize: 20,
-        fontFamily: 'FredokaOne-Regular',
+        fontFamily: cssValues.defaultFontFamily,
         backgroundColor: 'rgba(0, 5, 5, 0.6)',
         color: '#fff',
         textTransform: 'none',
@@ -695,7 +698,7 @@ const styles = StyleSheet.create({
     }, 
     textHighScore: {
         color: '#fff',
-        fontFamily: 'FredokaOne-Regular',
+        fontFamily:  cssValues.defaultFontFamily,
         fontSize: 20,
 
     },
@@ -710,9 +713,8 @@ const styles = StyleSheet.create({
     modalText: {
         color: '#fff',
         fontSize: 45,
-        fontFamily: 'FredokaOne-Regular',
+        fontFamily: cssValues.defaultFontFamily,
         textTransform: 'uppercase',
     }
-
 
 })
