@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { 
     View, Text, StyleSheet, TouchableWithoutFeedback, 
-    Image, Modal, ImageBackground, BackHandler, 
+    Modal, ImageBackground, BackHandler, 
     Animated, Easing, TextInput
 } from 'react-native'
 import Orientation from 'react-native-orientation-locker'
@@ -24,9 +24,9 @@ const cupImage = require('../assets/images/cup-resized.png')
 const cupWrong = require('../assets/images/cup-wrong-resized.png')
 const luizaHead = require('../assets/images/luizaHead-draw.png')
 const detectiveImage = require('../assets/images/detective-original.png')
-const empty = require('../assets/images/1px.png')
+// const empty = require('../assets/images/1px.png')
 const wallpaper = require('../assets/images/forest-background.jpg')
-const wallpaperEnd = require('../assets/images/forest-background2.jpg')
+// const wallpaperEnd = require('../assets/images/forest-background2.jpg')
 const themeBackground = '#FF92B2'
 const music = '../assets/sounds/forest.mp3'
 const sndYes = '../assets/sounds/got-it.mp3'
@@ -57,17 +57,17 @@ const initialState = {
 //background music
 Sound.setCategory('Playback')
 
-let myMusic = new Sound(require(music), (error) => {})
+let myMusic = new Sound(require(music), () => {})
 myMusic.setNumberOfLoops(-1)
 myMusic.setVolume(0.2)
 
 //sound effects
-let effectYes = new Sound(require(sndYes), (error) => {})
-let effectNo  = new Sound(require(sndNo), (error) => {})
-let effectLive  = new Sound(require(sndLive), (error) => {})
-let effectGameOver  = new Sound(require(sndGameOver), (error) => {})
-let effectBoing  = new Sound(require(sndBoing), (error) => {})
-let effectSpider  = new Sound(require(sndSpider), (error) => {})
+let effectYes = new Sound(require(sndYes), () => {})
+let effectNo  = new Sound(require(sndNo), () => {})
+let effectLive  = new Sound(require(sndLive), () => {})
+let effectGameOver  = new Sound(require(sndGameOver), () => {})
+let effectBoing  = new Sound(require(sndBoing), () => {})
+let effectSpider  = new Sound(require(sndSpider), () => {})
 effectYes.setVolume(1)
 effectNo.setVolume(1)
 effectLive.setVolume(1)
@@ -221,7 +221,7 @@ export default class Game extends Component {
                 wonLive = 1
             }
 
-            this.state.effectsOn && effectYes.play((success) => {
+            this.state.effectsOn && effectYes.play(() => {
                 wonLive && effectLive.play()
             })
 
@@ -270,7 +270,7 @@ export default class Game extends Component {
         let musicOn = !this.state.musicOn
 
         if (musicOn) {
-            myMusic = new Sound(require(music), (error) => {})
+            myMusic = new Sound(require(music), () => {})
             myMusic.setVolume(0.2)
             myMusic.play()
         } else {
