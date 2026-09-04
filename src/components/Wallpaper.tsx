@@ -9,7 +9,7 @@ interface Props {
 export function Wallpaper({ source, children }: Props) {
   return (
     <View style={styles.fill}>
-      <Image source={source} resizeMode="stretch" style={StyleSheet.absoluteFill} />
+      <Image source={source} resizeMode="stretch" style={styles.image} />
       {children}
     </View>
   )
@@ -17,4 +17,6 @@ export function Wallpaper({ source, children }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  // Tamanho explícito: no Fabric o Image com absoluteFill sem width/height ficou no tamanho intrínseco.
+  image: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' },
 })

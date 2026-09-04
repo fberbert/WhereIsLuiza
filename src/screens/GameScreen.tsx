@@ -25,11 +25,11 @@ type OverlayKind = 'none' | 'hallOfFame' | 'closeApp'
 export function GameScreen() {
   const insets = useSafeAreaInsets()
   const [game, setGame] = useState<GameState | null>(null)
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
+  const [settings, setSettings] = useState<Settings | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [overlay, setOverlay] = useState<OverlayKind>('none')
   const closeOverlay = useCallback(() => setOverlay('none'), [])
-  const audio = useAudio(settings)
+  const audio = useAudio(settings ?? DEFAULT_SETTINGS)
 
   useEffect(() => {
     Promise.all([loadSettings(), loadGame(), loadLeaderboard()]).then(([s, g, lb]) => {
@@ -44,13 +44,13 @@ export function GameScreen() {
   }, [game])
 
   useEffect(() => {
-    saveSettings(settings)
+    if (settings) saveSettings(settings)
   }, [settings])
 
-  const patchSettings = useCallback((patch: Partial<Settings>) => setSettings(s => ({ ...s, ...patch })), [])
+  const patchSettings = useCallback((patch: Partial<Settings>) => setSettings(s => (s ? { ...s, ...patch } : s)), [])
 
   const onTapCup = (cup: CupIndex) => {
-    if (!game) return
+    if (!game || !settings) return
     const { state, events } = tap(game, cup)
     setGame(state)
     audio.playEvents(events)
@@ -58,12 +58,12 @@ export function GameScreen() {
   }
 
   const onSaveScore = async () => {
-    if (!game) return
+    if (!game || !settings) return
     setLeaderboard(await recordScore(settings.playerName, game.score))
     setGame(newGame())
   }
 
-  if (!game) return null
+  if (!game || !settings) return null
 
   const safeArea = {
     paddingTop: insets.top,

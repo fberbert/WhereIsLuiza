@@ -6,18 +6,16 @@ import { images } from '../src/assets'
 
 jest.mock('react-native-safe-area-context', () => require('react-native-safe-area-context/jest/mock').default)
 
-jest.mock('@react-native-async-storage/async-storage', () => {
-  const store: Record<string, string> = {}
-  return {
-    __esModule: true,
-    default: {
-      getItem: jest.fn(async (key: string) => store[key] ?? null),
-      setItem: jest.fn(async (key: string, value: string) => {
-        store[key] = value
-      }),
-    },
-  }
-})
+const mockStore: Record<string, string> = {}
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: jest.fn(async (key: string) => mockStore[key] ?? null),
+    setItem: jest.fn(async (key: string, value: string) => {
+      mockStore[key] = value
+    }),
+  },
+}))
 
 const played: string[] = []
 jest.mock('react-native-sound', () => {
@@ -79,13 +77,15 @@ const cupImages = (tree: ReactTestRenderer) =>
     .map(i => i.props.source)
     .filter(s => s === images.cup || s === images.cupWrong || s === images.luizaHead)
 
-it('renders the game after loading persisted state and plays music', async () => {
+it('renders the game with persisted settings intact and plays music', async () => {
+  mockStore['luiza.settings'] = JSON.stringify({ musicOn: true, effectsOn: true, highScore: 7, playerName: 'Luiza' })
   const tree = await renderApp()
   const all = texts(tree)
   expect(all).toContain('Onde Está Luiza?')
-  expect(all.some(t => t.startsWith('Hall da Fama | Recorde: 0'))).toBe(true)
+  expect(all.some(t => t.startsWith('Hall da Fama | Recorde: 7'))).toBe(true)
   expect(cupImages(tree)).toEqual([images.cup, images.cup, images.cup])
   expect(played).toContain('forest.mp3')
+  expect(JSON.parse(mockStore['luiza.settings'])).toMatchObject({ highScore: 7, playerName: 'Luiza' })
 })
 
 it('tapping a cup reveals Luiza and plays a hit or miss sound', async () => {
