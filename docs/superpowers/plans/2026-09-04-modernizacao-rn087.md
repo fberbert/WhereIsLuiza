@@ -1493,3 +1493,16 @@ git checkout master && git merge --no-ff modernizacao -m "Modernização para Re
 - **Layout**: margens fixas (`marginLeft: 140`) foram calibradas em 2020. O S25 em landscape tem ~830 dp de largura; deve caber. Se os copos apertarem, reduzir para 100/60 em `Board.tsx` e `GameScreen.tsx`.
 - **Nomes de ícones**: `Fontisto` `volume-mute`, `music-note`, `close-a`, `save` e `FontAwesome5` `trophy`, `home` existem nos glyphmaps v13; o TypeScript acusa se algum sumiu.
 - **Senha antiga** (`m3uGoogle!`) continua no histórico do git público. O keystore novo torna isso irrelevante para o app; se a senha for reutilizada em outro lugar, trocar lá.
+
+---
+
+## Execução — desvios do plano (2026-09-04)
+
+- **Sons em `res/raw`, não via `require()`**: `react-native-sound` 0.13 exige nome de arquivo string (`new Sound('forest.mp3', Sound.MAIN_BUNDLE, cb)`); passar o id numérico do `require` quebra com `undefined is not a function`. Os arquivos foram movidos para `android/app/src/main/res/raw/` (hífens viraram `_`). `setVolume`/`setNumberOfLoops`/`play` só têm efeito depois do callback de load, então o hook aplica tudo no `onReady`.
+- **Overlays em vez de `Modal`**: `src/modals/*Modal.tsx` viraram `src/overlays/*Overlay.tsx` sobre um `components/Overlay.tsx` (View absoluto com fade + BackHandler). O `Modal` nativo em landscape anima o "slide" de lado.
+- **`Wallpaper` em vez de `ImageBackground`** (deprecado no 0.87). O `Image` precisa de `width/height: '100%'` explícitos: com `absoluteFill` sem tamanho, o Fabric desenhou a imagem no tamanho intrínseco (598×398 dp).
+- **Settings só persistem depois de carregar** (`settings` começa `null`); antes, o efeito de salvar disparava com os defaults e sobrescrevia o que estava gravado.
+- **`__tests__/App.test.tsx`** renderiza o app com mocks nativos e exercita um toque de copo (15 testes no total).
+- **Prettier**: `semi: false`, `printWidth: 120` (estilo do código original).
+- **Fontes** só em `android/app/src/main/assets/fonts/`; `assets/fonts/` removido.
+- **Verificação**: S25 estava com tela bloqueada por PIN; o release foi instalado nele e o JS rodou sem erros (logcat), mas o checklist visual foi feito em emulador Android 16 x86_64 (`avdmanager create avd -n wil -k "system-images;android-36;google_apis;x86_64"`).
