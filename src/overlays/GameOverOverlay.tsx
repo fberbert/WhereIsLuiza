@@ -1,8 +1,9 @@
 import React from 'react'
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import LottieView from 'lottie-react-native'
 import Fontisto from '@react-native-vector-icons/fontisto/static'
 import { lottie } from '../assets'
+import { Overlay } from '../components/Overlay'
 import { colors, fonts } from '../theme'
 
 interface Props {
@@ -13,9 +14,9 @@ interface Props {
   onSave: () => void
 }
 
-export function GameOverModal({ visible, score, playerName, onChangeName, onSave }: Props) {
+export function GameOverOverlay({ visible, score, playerName, onChangeName, onSave }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Overlay visible={visible}>
       <View style={styles.backdrop}>
         <Text style={styles.title}>Fim de Jogo</Text>
         <View style={styles.scoreRow}>
@@ -37,7 +38,7 @@ export function GameOverModal({ visible, score, playerName, onChangeName, onSave
           </Pressable>
         </View>
       </View>
-    </Modal>
+    </Overlay>
   )
 }
 

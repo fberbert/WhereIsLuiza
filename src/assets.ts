@@ -12,4 +12,3 @@ export const lottie = {
   spider: require('../assets/lottie/spider.json'),
   heart: require('../assets/lottie/heart.json'),
 } as const
-

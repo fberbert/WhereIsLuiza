@@ -12,22 +12,23 @@ import { TopBar } from '../components/TopBar'
 import { TrophiesRow } from '../components/TrophiesRow'
 import { Wallpaper } from '../components/Wallpaper'
 import { newGame, tap, type CupIndex, type GameState } from '../game/logic'
-import { CloseAppModal } from '../modals/CloseAppModal'
-import { GameOverModal } from '../modals/GameOverModal'
-import { HallOfFameModal } from '../modals/HallOfFameModal'
+import { CloseAppOverlay } from '../overlays/CloseAppOverlay'
+import { GameOverOverlay } from '../overlays/GameOverOverlay'
+import { HallOfFameOverlay } from '../overlays/HallOfFameOverlay'
 import { loadGame, saveGame } from '../storage/game'
 import { loadLeaderboard, recordScore, type LeaderboardEntry } from '../storage/leaderboard'
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type Settings } from '../storage/settings'
 import { colors, fonts } from '../theme'
 
-type Overlay = 'none' | 'hallOfFame' | 'closeApp'
+type OverlayKind = 'none' | 'hallOfFame' | 'closeApp'
 
 export function GameScreen() {
   const insets = useSafeAreaInsets()
   const [game, setGame] = useState<GameState | null>(null)
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
-  const [overlay, setOverlay] = useState<Overlay>('none')
+  const [overlay, setOverlay] = useState<OverlayKind>('none')
+  const closeOverlay = useCallback(() => setOverlay('none'), [])
   const audio = useAudio(settings)
 
   useEffect(() => {
@@ -75,20 +76,6 @@ export function GameScreen() {
     <Wallpaper source={images.wallpaper}>
       <StatusBar hidden />
       <View style={[styles.container, safeArea]}>
-        <HallOfFameModal
-          visible={overlay === 'hallOfFame'}
-          entries={leaderboard}
-          onClose={() => setOverlay('none')}
-        />
-        <CloseAppModal visible={overlay === 'closeApp'} onCancel={() => setOverlay('none')} />
-        <GameOverModal
-          visible={game.gameOver}
-          score={game.score}
-          playerName={settings.playerName}
-          onChangeName={name => patchSettings({ playerName: name })}
-          onSave={onSaveScore}
-        />
-
         <Spider onPress={() => audio.play('spider')} />
         <Detective onPress={() => audio.play('boing')} />
         <TopBar
@@ -117,6 +104,16 @@ export function GameScreen() {
         <Pressable onPress={() => setOverlay('hallOfFame')} style={styles.hallOfFame}>
           <Text style={styles.hallOfFameText}>Hall da Fama | Recorde: {settings.highScore}</Text>
         </Pressable>
+
+        <HallOfFameOverlay visible={overlay === 'hallOfFame'} entries={leaderboard} onClose={closeOverlay} />
+        <CloseAppOverlay visible={overlay === 'closeApp'} onCancel={closeOverlay} />
+        <GameOverOverlay
+          visible={game.gameOver}
+          score={game.score}
+          playerName={settings.playerName}
+          onChangeName={name => patchSettings({ playerName: name })}
+          onSave={onSaveScore}
+        />
       </View>
     </Wallpaper>
   )

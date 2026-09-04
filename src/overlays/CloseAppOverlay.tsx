@@ -1,5 +1,6 @@
 import React from 'react'
-import { BackHandler, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Overlay } from '../components/Overlay'
 import { colors, fonts } from '../theme'
 
 interface Props {
@@ -7,9 +8,9 @@ interface Props {
   onCancel: () => void
 }
 
-export function CloseAppModal({ visible, onCancel }: Props) {
+export function CloseAppOverlay({ visible, onCancel }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    <Overlay visible={visible} onRequestClose={onCancel}>
       <View style={styles.backdrop}>
         <Text style={styles.question}>Sair do jogo?</Text>
         <View style={styles.answers}>
@@ -21,7 +22,7 @@ export function CloseAppModal({ visible, onCancel }: Props) {
           </Pressable>
         </View>
       </View>
-    </Modal>
+    </Overlay>
   )
 }
 

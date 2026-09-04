@@ -1,8 +1,9 @@
 import React from 'react'
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
 import FontAwesome5 from '@react-native-vector-icons/fontawesome5/static'
 import { images } from '../assets'
 import { AnimatedTitle } from '../components/AnimatedTitle'
+import { Overlay } from '../components/Overlay'
 import { Wallpaper } from '../components/Wallpaper'
 import type { LeaderboardEntry } from '../storage/leaderboard'
 import { colors, fonts } from '../theme'
@@ -30,9 +31,9 @@ function Row({ rank, entry }: { rank: number; entry: LeaderboardEntry }) {
   )
 }
 
-export function HallOfFameModal({ visible, entries, onClose }: Props) {
+export function HallOfFameOverlay({ visible, entries, onClose }: Props) {
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Overlay visible={visible} onRequestClose={onClose}>
       <Wallpaper source={images.wallpaperHallOfFame}>
         <View style={styles.container}>
           <View style={styles.header}>
@@ -60,7 +61,7 @@ export function HallOfFameModal({ visible, entries, onClose }: Props) {
           </Pressable>
         </View>
       </Wallpaper>
-    </Modal>
+    </Overlay>
   )
 }
 
