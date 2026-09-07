@@ -66,10 +66,11 @@ export function GameScreen() {
   if (!game || !settings) return null
 
   const safeArea = {
-    paddingTop: insets.top,
-    paddingBottom: insets.bottom,
-    paddingLeft: insets.left,
-    paddingRight: insets.right,
+    // Recuar o contêiner também protege os filhos absolutos da barra do Android.
+    marginTop: insets.top,
+    marginBottom: insets.bottom,
+    marginLeft: insets.left,
+    marginRight: insets.right,
   }
 
   return (
