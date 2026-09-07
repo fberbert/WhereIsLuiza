@@ -1,17 +1,37 @@
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { Pressable, StyleSheet } from 'react-native'
 import LottieView from 'lottie-react-native'
 import { lottie } from '../assets'
 
-export function Spider({ onPress }: { onPress: () => void }) {
+export function Spider({
+  onPress,
+  paused = false,
+  size = 86,
+}: {
+  onPress: () => void
+  paused?: boolean
+  size?: number
+}) {
+  const animation = useRef<LottieView>(null)
+  useEffect(() => {
+    if (paused) animation.current?.pause()
+    else animation.current?.play()
+  }, [paused])
   return (
-    <Pressable onPress={onPress} style={styles.wrap}>
-      <LottieView source={lottie.spider} autoPlay loop style={styles.anim} />
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel="Ouvir aranha" style={styles.wrap}>
+      <LottieView
+        ref={animation}
+        source={lottie.spider}
+        progress={paused ? 0.5 : undefined}
+        autoPlay={!paused}
+        loop
+        style={[styles.anim, { width: size, height: size }]}
+      />
     </Pressable>
   )
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', top: 0, left: 20 },
+  wrap: { minHeight: 48, minWidth: 48 },
   anim: { width: 120, height: 120 },
 })

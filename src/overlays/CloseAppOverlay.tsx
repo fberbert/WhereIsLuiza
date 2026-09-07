@@ -14,10 +14,14 @@ export function CloseAppOverlay({ visible, onCancel }: Props) {
       <View style={styles.backdrop}>
         <Text style={styles.question}>Sair do jogo?</Text>
         <View style={styles.answers}>
-          <Pressable onPress={() => BackHandler.exitApp()}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Confirmar saída"
+            onPress={() => BackHandler.exitApp()}
+          >
             <Text style={styles.answer}>Sim</Text>
           </Pressable>
-          <Pressable onPress={onCancel}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Continuar jogando" onPress={onCancel}>
             <Text style={styles.answer}>Não</Text>
           </Pressable>
         </View>

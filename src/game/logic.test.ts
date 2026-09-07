@@ -1,79 +1,213 @@
-import { CUP_COUNT, INITIAL_LIVES, cupFace, newGame, nextRound, tap } from './logic'
+import {
+  chooseCup,
+  completePhase,
+  completeSwap,
+  newGame,
+  nextRound,
+  resumeGame,
+  type CupId,
+  type GamePhase,
+  type GameState,
+} from './logic'
 
-const rngFor = (cup: number) => () => cup / CUP_COUNT
+const rng = () => 0
+const phases: GamePhase[] = ['preview', 'covering', 'shuffling', 'guessing', 'revealing', 'roundEnd', 'gameOver']
 
-describe('newGame', () => {
-  it('starts with 3 lives, zero score, closed cups', () => {
-    const g = newGame(rngFor(1))
-    expect(g).toEqual({
+function ready(state = newGame(rng)): GameState {
+  const covering = completePhase(state, state.roundId, 'preview')
+  let shuffled = completePhase(covering, covering.roundId, 'covering')
+  while (shuffled.phase === 'shuffling') {
+    shuffled = completeSwap(shuffled, shuffled.roundId, shuffled.swapIndex)
+  }
+  return shuffled
+}
+
+function endRound(state: GameState): GameState {
+  return completePhase(state, state.roundId, 'revealing')
+}
+
+describe('round setup', () => {
+  it('starts a deterministic preview with stable cup IDs and a shuffle plan', () => {
+    expect(newGame(rng, 8)).toEqual({
       score: 0,
-      lives: INITIAL_LIVES,
-      streak: 0,
-      luizaAt: 1,
-      phase: 'closed',
+      lives: 3,
+      hitsTowardLife: 0,
+      luizaCupId: 0,
+      order: [0, 1, 2],
+      swaps: [
+        [0, 1],
+        [0, 2],
+        [0, 1],
+      ],
+      swapIndex: 0,
+      phase: 'preview',
       lastGuess: null,
-      gameOver: false,
+      roundId: 8,
+      difficulty: { swaps: 3, durationMs: 650 },
     })
   })
-})
 
-describe('tap on closed cups', () => {
-  it('hit: +1 score, +1 streak, reveals', () => {
-    const { state, events } = tap(newGame(rngFor(2)), 2)
-    expect(state).toMatchObject({ score: 1, streak: 1, lives: 3, phase: 'revealed', lastGuess: 2 })
-    expect(events).toEqual(['hit'])
+  it.each([0, 1, 2] as CupId[])('selects Luiza cup %i using the supplied RNG', cupId => {
+    expect(newGame(() => cupId / 3).luizaCupId).toBe(cupId)
   })
 
-  it('second consecutive hit grants a life and resets streak', () => {
-    const first = tap(newGame(rngFor(0)), 0).state
-    const { state, events } = tap(nextRound(first, rngFor(1)), 1)
-    expect(state).toMatchObject({ score: 2, streak: 0, lives: 4 })
-    expect(events).toEqual(['hit', 'extraLife'])
+  it('supports default random sources', () => {
+    const start = newGame()
+    expect(start.roundId).toBe(0)
+    expect(start.luizaCupId).toBeGreaterThanOrEqual(0)
+    expect(start.luizaCupId).toBeLessThan(3)
+    expect(nextRound({ ...start, phase: 'roundEnd' }).phase).toBe('preview')
+    expect(resumeGame(start).phase).toBe('preview')
   })
 
-  it('miss: -1 life, streak untouched', () => {
-    const g = { ...newGame(rngFor(0)), streak: 1 }
-    const { state, events } = tap(g, 2)
-    expect(state).toMatchObject({ lives: 2, streak: 1, score: 0, phase: 'revealed', lastGuess: 2 })
-    expect(events).toEqual(['miss'])
+  it('prepares the next difficulty while preserving earned totals', () => {
+    const previous: GameState = {
+      ...newGame(rng),
+      phase: 'roundEnd',
+      score: 3,
+      lives: 7,
+      hitsTowardLife: 1,
+      lastGuess: 0,
+    }
+    expect(nextRound(previous, () => 0.8)).toMatchObject({
+      phase: 'preview',
+      score: 3,
+      lives: 7,
+      hitsTowardLife: 1,
+      lastGuess: null,
+      luizaCupId: 2,
+      order: [0, 1, 2],
+      roundId: 1,
+      swapIndex: 0,
+      difficulty: { swaps: 4, durationMs: 560 },
+    })
+    expect(nextRound(previous, rng).swaps).toHaveLength(4)
   })
 
-  it('miss on last life ends the game', () => {
-    const g = { ...newGame(rngFor(0)), lives: 1 }
-    const { state, events } = tap(g, 1)
-    expect(state.gameOver).toBe(true)
-    expect(state.lives).toBe(0)
-    expect(events).toEqual(['miss', 'gameOver'])
-  })
-})
-
-describe('tap on revealed cups', () => {
-  it('starts a new round keeping score/lives/streak', () => {
-    const revealed = tap(newGame(rngFor(0)), 0).state
-    const { state, events } = tap(revealed, 1, rngFor(2))
-    expect(state).toMatchObject({ score: 1, streak: 1, lives: 3, luizaAt: 2, phase: 'closed', lastGuess: null })
-    expect(events).toEqual([])
-  })
-})
-
-describe('tap after game over', () => {
-  it('is ignored', () => {
-    const g = { ...newGame(rngFor(0)), lives: 0, gameOver: true, phase: 'revealed' as const }
-    expect(tap(g, 0)).toEqual({ state: g, events: [] })
+  it.each(phases.filter(phase => phase !== 'roundEnd'))('does not start another round from %s', phase => {
+    const state = { ...newGame(rng), phase }
+    expect(nextRound(state, rng)).toBe(state)
   })
 })
 
-describe('cupFace', () => {
-  it('all closed before a guess', () => {
-    const g = newGame(rngFor(1))
-    expect([0, 1, 2].map(i => cupFace(g, i as 0 | 1 | 2))).toEqual(['closed', 'closed', 'closed'])
+describe('phase and shuffle callbacks', () => {
+  it('covers Luiza before moving and waits for every swap before guessing', () => {
+    const preview = newGame(rng)
+    const covering = completePhase(preview, 0, 'preview')
+    expect(covering.phase).toBe('covering')
+    const shuffling = completePhase(covering, 0, 'covering')
+    expect(shuffling.phase).toBe('shuffling')
+    const first = completeSwap(shuffling, 0, 0)
+    expect(first).toMatchObject({ phase: 'shuffling', swapIndex: 1, order: [1, 0, 2] })
+    expect(shuffling.order).toEqual([0, 1, 2])
+    const second = completeSwap(first, 0, 1)
+    expect(second).toMatchObject({ phase: 'shuffling', swapIndex: 2, order: [2, 0, 1] })
+    const third = completeSwap(second, 0, 2)
+    expect(third).toMatchObject({ phase: 'guessing', swapIndex: 3, order: [0, 2, 1] })
+    expect(third.luizaCupId).toBe(preview.luizaCupId)
   })
-  it('hit: luiza on the right cup, others stay closed', () => {
-    const g = tap(newGame(rngFor(1)), 1).state
-    expect([0, 1, 2].map(i => cupFace(g, i as 0 | 1 | 2))).toEqual(['closed', 'luiza', 'closed'])
+
+  it('rejects stale rounds and duplicate phase completions', () => {
+    const preview = newGame(rng, 4)
+    expect(completePhase(preview, 3, 'preview')).toBe(preview)
+    expect(completePhase(preview, 4, 'covering')).toBe(preview)
+    const covering = completePhase(preview, 4, 'preview')
+    expect(completePhase(covering, 4, 'preview')).toBe(covering)
   })
-  it('miss: luiza on the right cup, others wrong', () => {
-    const g = tap(newGame(rngFor(1)), 0).state
-    expect([0, 1, 2].map(i => cupFace(g, i as 0 | 1 | 2))).toEqual(['wrong', 'luiza', 'wrong'])
+
+  it.each(['shuffling', 'guessing', 'roundEnd', 'gameOver'] as GamePhase[])(
+    'ignores generic phase completion in %s',
+    phase => {
+      const state = { ...newGame(rng), phase }
+      expect(completePhase(state, state.roundId, phase)).toBe(state)
+    },
+  )
+
+  it('rejects stale rounds, out-of-order swaps and duplicate swap callbacks', () => {
+    const state = completePhase(completePhase(newGame(rng), 0, 'preview'), 0, 'covering')
+    expect(completeSwap(state, 1, 0)).toBe(state)
+    expect(completeSwap(state, 0, 1)).toBe(state)
+    const moved = completeSwap(state, 0, 0)
+    expect(completeSwap(moved, 0, 0)).toBe(moved)
+  })
+
+  it.each(phases.filter(phase => phase !== 'shuffling'))('ignores swap completion in %s', phase => {
+    const state = { ...newGame(rng), phase }
+    expect(completeSwap(state, 0, 0)).toBe(state)
+  })
+})
+
+describe('guesses and accumulated rewards', () => {
+  it('awards a point and reveals only once', () => {
+    const before = ready()
+    const hit = chooseCup(before, 0)
+    expect(hit.state).toMatchObject({ score: 1, lives: 3, hitsTowardLife: 1, phase: 'revealing', lastGuess: 0 })
+    expect(hit.events).toEqual(['hit'])
+    expect(before.score).toBe(0)
+    expect(chooseCup(hit.state, 0)).toEqual({ state: hit.state, events: [] })
+    expect(endRound(hit.state).phase).toBe('roundEnd')
+  })
+
+  it('counts stable cup identity instead of its shuffled position', () => {
+    const state: GameState = { ...ready(), order: [2, 0, 1], luizaCupId: 0 }
+    expect(chooseCup(state, 0).events).toEqual(['hit'])
+    expect(chooseCup(state, 1).events).toEqual(['miss'])
+  })
+
+  it('acerto, erro, acerto earns one extra life without resetting progress on the miss', () => {
+    const hit = chooseCup(ready(), 0).state
+    const miss = chooseCup(ready(nextRound(endRound(hit), rng)), 1)
+    expect(miss.state).toMatchObject({ score: 1, lives: 2, hitsTowardLife: 1 })
+    expect(miss.events).toEqual(['miss'])
+    const secondHit = chooseCup(ready(nextRound(endRound(miss.state), rng)), 0)
+    expect(secondHit.state).toMatchObject({ score: 2, lives: 3, hitsTowardLife: 0 })
+    expect(secondHit.events).toEqual(['hit', 'extraLife'])
+  })
+
+  it('reveals the last miss before entering game over', () => {
+    const miss = chooseCup({ ...ready(), lives: 1 }, 2)
+    expect(miss.state).toMatchObject({ lives: 0, phase: 'revealing', lastGuess: 2 })
+    expect(miss.events).toEqual(['miss', 'gameOver'])
+    const ended = endRound(miss.state)
+    expect(ended.phase).toBe('gameOver')
+    expect(nextRound(ended, rng)).toBe(ended)
+  })
+
+  it.each(phases.filter(phase => phase !== 'guessing'))('ignores guesses in %s', phase => {
+    const state = { ...newGame(rng), phase }
+    expect(chooseCup(state, 0)).toEqual({ state, events: [] })
+  })
+})
+
+describe('resume', () => {
+  it.each(['preview', 'covering', 'shuffling', 'guessing'] as GamePhase[])(
+    'restarts unjudged %s with a new round ID and preserves totals',
+    phase => {
+      const state: GameState = { ...newGame(rng, 12), phase, score: 9, lives: 5, hitsTowardLife: 1 }
+      const resumed = resumeGame(state, () => 0.9)
+      expect(resumed).toMatchObject({
+        phase: 'preview',
+        roundId: 13,
+        score: 9,
+        lives: 5,
+        hitsTowardLife: 1,
+        luizaCupId: 2,
+        swapIndex: 0,
+        lastGuess: null,
+        difficulty: { swaps: 6, durationMs: 380 },
+      })
+      expect(resumed.swaps).toHaveLength(6)
+      expect(completePhase(resumed, 12, 'preview')).toBe(resumed)
+    },
+  )
+
+  it.each([1, 0])('settles judged reveal with %i lives without replaying rewards', lives => {
+    const state: GameState = { ...newGame(rng, 4), phase: 'revealing', lastGuess: 1, lives, score: 2 }
+    expect(resumeGame(state, rng)).toEqual({ ...state, phase: lives > 0 ? 'roundEnd' : 'gameOver' })
+  })
+
+  it.each(['roundEnd', 'gameOver'] as GamePhase[])('preserves settled %s', phase => {
+    const state = { ...newGame(rng), phase }
+    expect(resumeGame(state, rng)).toBe(state)
   })
 })

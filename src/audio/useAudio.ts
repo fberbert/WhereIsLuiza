@@ -34,28 +34,46 @@ function load(file: string, onReady?: (sound: Sound) => void): Sound {
 interface Options {
   musicOn: boolean
   effectsOn: boolean
+  active?: boolean
 }
 
-export function useAudio({ musicOn, effectsOn }: Options) {
+export function useAudio({ musicOn, effectsOn, active = true }: Options) {
   const music = useRef<Sound | null>(null)
   const effects = useRef<Record<Effect, Sound> | null>(null)
-  const musicOnRef = useRef(musicOn)
-  musicOnRef.current = musicOn
+  const options = useRef({ musicOn, effectsOn, active })
+  const generation = useRef(0)
+  options.current = { musicOn, effectsOn, active }
 
   useEffect(() => {
+    let disposed = false
     const m = load(MUSIC_FILE, s => {
+      if (disposed) {
+        s.release()
+        return
+      }
       s.setVolume(MUSIC_VOLUME)
       s.setNumberOfLoops(-1)
-      if (musicOnRef.current) s.play()
+      if (options.current.musicOn && options.current.active) s.play()
     })
     music.current = m
-    const loaded = {} as Record<Effect, Sound>
-    for (const effect of Object.keys(EFFECT_FILE) as Effect[]) loaded[effect] = load(EFFECT_FILE[effect])
+    const loaded = Object.fromEntries(
+      (Object.keys(EFFECT_FILE) as Effect[]).map(effect => [
+        effect,
+        load(EFFECT_FILE[effect], s => {
+          if (disposed) s.release()
+        }),
+      ]),
+    ) as Record<Effect, Sound>
     effects.current = loaded
     return () => {
+      disposed = true
+      generation.current += 1
       m.stop()
       m.release()
-      Object.values(loaded).forEach(s => s.release())
+      Object.values(loaded).forEach(s => {
+        s.stop()
+        s.release()
+      })
       music.current = null
       effects.current = null
     }
@@ -64,21 +82,36 @@ export function useAudio({ musicOn, effectsOn }: Options) {
   useEffect(() => {
     const m = music.current
     if (!m?.isLoaded()) return
-    if (musicOn) m.play()
+    if (musicOn && active) m.play()
     else m.pause()
-  }, [musicOn])
+  }, [musicOn, active])
+
+  useEffect(() => {
+    if (effectsOn && active) return
+    generation.current += 1
+    Object.values(effects.current ?? {}).forEach(s => {
+      if (s.isLoaded()) s.stop()
+    })
+  }, [effectsOn, active])
 
   return useMemo(() => {
     const play = (effect: Effect, onEnd?: () => void) => {
-      if (!effectsOn) return
-      effects.current?.[effect].play(onEnd)
+      if (!options.current.effectsOn || !options.current.active) return
+      const sound = effects.current?.[effect]
+      if (!sound?.isLoaded()) return
+      const started = generation.current
+      sound.play(() => {
+        if (started === generation.current && options.current.effectsOn && options.current.active) onEnd?.()
+      })
     }
     const playEvents = (events: GameEvent[]) => {
-      const [first, ...rest] = events.map(e => EVENT_EFFECT[e])
-      if (!first) return
-      // 'extraLife' toca depois de 'hit' terminar (comportamento original)
-      play(first, () => rest.forEach(e => play(e)))
+      const sequence = events.map(event => EVENT_EFFECT[event])
+      const next = (index: number) => {
+        const effect = sequence[index]
+        if (effect) play(effect, () => next(index + 1))
+      }
+      next(0)
     }
     return { play, playEvents }
-  }, [effectsOn])
+  }, [])
 }

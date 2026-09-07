@@ -56,7 +56,12 @@ export function HallOfFameOverlay({ visible, entries, onClose }: Props) {
             renderItem={({ item, index }) => <Row rank={index + 1} entry={item} />}
             style={styles.list}
           />
-          <Pressable onPress={onClose} style={styles.close}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Voltar ao jogo"
+            onPress={onClose}
+            style={styles.close}
+          >
             <FontAwesome5 name="home" iconStyle="solid" size={30} color={colors.white} />
           </Pressable>
         </View>
