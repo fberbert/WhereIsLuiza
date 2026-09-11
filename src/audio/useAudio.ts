@@ -42,6 +42,8 @@ export function useAudio({ musicOn, effectsOn, active = true }: Options) {
   const effects = useRef<Record<Effect, Sound> | null>(null)
   const options = useRef({ musicOn, effectsOn, active })
   const generation = useRef(0)
+  const shuffle = useRef<Sound | null>(null)
+  const shuffleGeneration = useRef(0)
   options.current = { musicOn, effectsOn, active }
 
   useEffect(() => {
@@ -64,10 +66,18 @@ export function useAudio({ musicOn, effectsOn, active = true }: Options) {
         }),
       ]),
     ) as Record<Effect, Sound>
+    const shuffleSound = load('shuffle.wav', s => {
+      if (disposed) s.release()
+    })
+    shuffle.current = shuffleSound
     effects.current = loaded
     return () => {
       disposed = true
       generation.current += 1
+      shuffleGeneration.current += 1
+      shuffleSound.stop()
+      shuffleSound.release()
+      shuffle.current = null
       m.stop()
       m.release()
       Object.values(loaded).forEach(s => {
@@ -89,6 +99,8 @@ export function useAudio({ musicOn, effectsOn, active = true }: Options) {
   useEffect(() => {
     if (effectsOn && active) return
     generation.current += 1
+    shuffleGeneration.current += 1
+    if (shuffle.current?.isLoaded()) shuffle.current.stop()
     Object.values(effects.current ?? {}).forEach(s => {
       if (s.isLoaded()) s.stop()
     })
@@ -112,6 +124,22 @@ export function useAudio({ musicOn, effectsOn, active = true }: Options) {
       }
       next(0)
     }
-    return { play, playEvents }
+    const playShuffle = (durationMs: number): (() => void) => {
+      const sound = shuffle.current
+      if (!options.current.effectsOn || !options.current.active || !sound?.isLoaded()) return () => {}
+      const started = ++shuffleGeneration.current
+      sound.stop(() => {
+        if (started !== shuffleGeneration.current || !options.current.effectsOn || !options.current.active) return
+        sound.setVolume(0.55)
+        sound.setSpeed(360 / durationMs)
+        sound.play()
+      })
+      return () => {
+        if (started !== shuffleGeneration.current) return
+        shuffleGeneration.current += 1
+        sound.stop()
+      }
+    }
+    return { play, playEvents, playShuffle }
   }, [])
 }

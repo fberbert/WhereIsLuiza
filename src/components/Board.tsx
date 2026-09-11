@@ -11,6 +11,7 @@ interface Props {
   reducedMotion: boolean
   onChoose: (cup: CupId) => void
   onAnimationEnd: (result: { finished: boolean }) => void
+  onShuffleStart: (durationMs: number) => () => void
   onResize: () => void
   scoreTarget: { x: number; y: number } | null
   generation: number
@@ -23,6 +24,7 @@ export function Board({
   reducedMotion,
   onChoose,
   onAnimationEnd,
+  onShuffleStart,
   onResize,
   scoreTarget,
   generation,
@@ -49,6 +51,11 @@ export function Board({
     if (!enabled || size.width <= 0 || size.height <= 0 || !duration) return
     let active = true
     let completed = false
+    let stopSound = phase === 'shuffling' ? onShuffleStart(duration) : undefined
+    const finishSound = () => {
+      stopSound?.()
+      stopSound = undefined
+    }
     const animation = Animated.timing(progress, {
       toValue: 1,
       duration,
@@ -57,15 +64,30 @@ export function Board({
       isInteraction: false,
     })
     animation.start(({ finished }) => {
-      if (!active || completed || !finished) return
+      if (!active || completed) return
+      finishSound()
+      if (!finished) return
       completed = true
       onAnimationEnd({ finished: true })
     })
     return () => {
       active = false
       animation.stop()
+      finishSound()
     }
-  }, [progress, enabled, size.width, size.height, duration, phase, roundId, swapIndex, generation, onAnimationEnd])
+  }, [
+    progress,
+    enabled,
+    size.width,
+    size.height,
+    duration,
+    phase,
+    roundId,
+    swapIndex,
+    generation,
+    onAnimationEnd,
+    onShuffleStart,
+  ])
 
   const onLayout = ({ nativeEvent: { layout: measured } }: LayoutChangeEvent) => {
     board.current?.measureInWindow((x, y) => setOrigin({ x, y }))

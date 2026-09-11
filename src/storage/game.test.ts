@@ -61,6 +61,16 @@ describe('loadGame', () => {
     expect(await loadGame()).toBeNull()
   })
 
+  it.each([0, 1, 2, 3, 4] as const)(
+    'round-trips accumulated progress %i without resetting totals',
+    async hitsTowardLife => {
+      const saved = state({ hitsTowardLife })
+      await saveGame(saved)
+      getItem.mockResolvedValue(setItem.mock.calls[0][1])
+      expect(await loadGame()).toMatchObject({ score: 4, lives: 3, hitsTowardLife })
+    },
+  )
+
   it('propagates storage read failures', async () => {
     getItem.mockRejectedValue(new Error('disk unavailable'))
     await expect(loadGame()).rejects.toThrow('disk unavailable')
@@ -147,7 +157,10 @@ describe('loadGame', () => {
     { score: Number.MAX_SAFE_INTEGER + 1 },
     { lives: '3' },
     { lives: -1 },
-    { hitsTowardLife: 2 },
+    { hitsTowardLife: 5 },
+    { hitsTowardLife: -1 },
+    { hitsTowardLife: 1.5 },
+    { hitsTowardLife: '4' },
     { luizaCupId: 3 },
     { order: [0, 0, 2] },
     { order: [0, 1] },

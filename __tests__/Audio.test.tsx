@@ -20,7 +20,12 @@ class MockSound {
     return this
   })
   pause = jest.fn(() => this)
-  stop = jest.fn(() => this)
+  stops: Array<() => void> = []
+  stop = jest.fn((completion?: () => void) => {
+    if (completion) this.stops.push(completion)
+    return this
+  })
+  setSpeed = jest.fn(() => this)
   release = jest.fn(() => {
     this.loaded = false
     return this
@@ -186,4 +191,67 @@ it('releases sounds that finish loading after unmount without playing', async ()
     expect(s.release).toHaveBeenCalled()
     expect(s.play).not.toHaveBeenCalled()
   })
+})
+
+it('rewinds shuffle and matches the swap duration at a gentle volume', async () => {
+  await mount()
+  loadAll()
+  const api = audio.playShuffle
+  const cleanup = api(560)
+  const shuffle = sound('shuffle.wav')
+  expect(shuffle.play).not.toHaveBeenCalled()
+  shuffle.stops[0]()
+  expect(shuffle.setSpeed).toHaveBeenCalledWith(360 / 560)
+  expect(shuffle.setVolume).toHaveBeenCalledWith(0.55)
+  expect(shuffle.play).toHaveBeenCalledTimes(1)
+  cleanup()
+  expect(shuffle.stop).toHaveBeenCalledTimes(2)
+  await update(initial)
+  expect(audio.playShuffle).toBe(api)
+})
+
+it('does not queue shuffle before loading or after load failure', async () => {
+  await mount()
+  audio.playShuffle(650)()
+  const shuffle = sound('shuffle.wav')
+  shuffle.finishLoad(new Error('missing'))
+  audio.playShuffle(650)()
+  expect(shuffle.stop).not.toHaveBeenCalled()
+  expect(shuffle.play).not.toHaveBeenCalled()
+})
+
+it.each(['mute', 'inactive', 'cleanup', 'unmount'] as const)(
+  'ignores delayed rewind callbacks after %s',
+  async change => {
+    await mount()
+    loadAll()
+    const cleanup = audio.playShuffle(470)
+    const shuffle = sound('shuffle.wav')
+    if (change === 'cleanup') cleanup()
+    else if (change === 'unmount') await act(async () => tree.unmount())
+    else {
+      await update({ ...initial, ...(change === 'mute' ? { effectsOn: false } : { active: false }) })
+      audio.playShuffle(470)()
+      await update(initial)
+    }
+    shuffle.stops[0]()
+    expect(shuffle.play).not.toHaveBeenCalled()
+  },
+)
+
+it('invalidates older swaps without letting their cleanup stop a newer swap', async () => {
+  await mount()
+  loadAll()
+  const firstCleanup = audio.playShuffle(650)
+  const secondCleanup = audio.playShuffle(380)
+  const shuffle = sound('shuffle.wav')
+  shuffle.stops[0]()
+  expect(shuffle.play).not.toHaveBeenCalled()
+  shuffle.stops[1]()
+  expect(shuffle.play).toHaveBeenCalledTimes(1)
+  expect(shuffle.setSpeed).toHaveBeenCalledWith(360 / 380)
+  firstCleanup()
+  expect(shuffle.stop).toHaveBeenCalledTimes(2)
+  secondCleanup()
+  expect(shuffle.stop).toHaveBeenCalledTimes(3)
 })

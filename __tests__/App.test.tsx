@@ -34,7 +34,11 @@ jest.mock('react-native-sound', () => {
       return this
     }
     pause = () => this
-    stop = () => this
+    stop = (onEnd?: () => void) => {
+      onEnd?.()
+      return this
+    }
+    setSpeed = () => this
     release = () => this
     setVolume = () => this
     setNumberOfLoops = () => this
@@ -124,7 +128,7 @@ it('loads legacy settings and game, preserving the record and cumulative progres
   await mount()
   expect(texts()).toContain('Onde Está Luiza?')
   expect(texts()).toContain('Pontos: 2')
-  expect(texts()).toContain('Vida extra: 1/2')
+  expect(texts()).toContain('Vida extra: 1/5')
   expect(texts().some(t => t.includes('Recorde: 7'))).toBe(true)
   expect(board().props.game.phase).toBe('preview')
   expect(JSON.parse(mockStore['luiza.game']).version).toBe(2)
@@ -136,22 +140,29 @@ it('plays a full hit, miss, extra-life sequence and requires the next-round butt
   await prepare()
   await act(async () => board().props.onChoose(0))
   expect(texts()).toContain('Me achou!')
-  expect(texts()).toContain('Vida extra: 1/2')
+  expect(texts()).toContain('Vida extra: 1/5')
   await finish()
   await press('Próxima rodada')
   await prepare()
   await act(async () => board().props.onChoose(1))
   expect(texts()).toContain('Vamos tentar de novo!')
-  expect(texts()).toContain('Vida extra: 1/2')
+  expect(texts()).toContain('Vida extra: 1/5')
   await finish()
-  await press('Próxima rodada')
-  await prepare()
-  await act(async () => board().props.onChoose(0))
-  expect(texts()).toContain('Vida extra: 2/2')
+  for (let hits = 2; hits <= 5; hits += 1) {
+    await press('Próxima rodada')
+    await prepare()
+    await act(async () => board().props.onChoose(0))
+    expect(texts()).toContain(`Vida extra: ${hits}/5`)
+    if (hits < 5) {
+      expect(board().props.game.lives).toBe(2)
+      await finish()
+    }
+  }
+  expect(texts()).toContain('Vida extra: 5/5')
   expect(board().props.game.lives).toBe(3)
   await finish()
-  expect(texts()).toContain('Vida extra: 0/2')
-  expect(texts()).toContain('Pontos: 2')
+  expect(texts()).toContain('Vida extra: 0/5')
+  expect(texts()).toContain('Pontos: 5')
 })
 
 it('shows game over after revealing, saves the name and resets the game', async () => {
@@ -201,4 +212,21 @@ it('toggles audio preferences and retries a failed initial read without writing 
   await press('Desligar efeitos sonoros')
   expect(JSON.parse(mockStore['luiza.settings'])).toMatchObject({ musicOn: false, effectsOn: false })
   expect(tree.root.findAllByType(View).length).toBeGreaterThan(0)
+})
+
+it('connects swap sounds to the effects toggle without changing the game', async () => {
+  await mount()
+  await finish()
+  await finish()
+  const before = board().props.game
+  let stopSound: () => void = () => {}
+  await act(async () => {
+    stopSound = board().props.onShuffleStart(650)
+  })
+  expect(mockPlayed.filter(file => file === 'shuffle.wav')).toHaveLength(1)
+  await act(async () => stopSound())
+  await press('Desligar efeitos sonoros')
+  await act(async () => board().props.onShuffleStart(650))
+  expect(mockPlayed.filter(file => file === 'shuffle.wav')).toHaveLength(1)
+  expect(board().props.game).toEqual(before)
 })

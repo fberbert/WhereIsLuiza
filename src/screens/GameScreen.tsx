@@ -156,6 +156,7 @@ function GameContent({ session, data }: { session: Session; data: GameSession })
           generation={round.generation}
           onChoose={round.choose}
           onAnimationEnd={round.onAnimationEnd}
+          onShuffleStart={audio.playShuffle}
           onResize={round.onResize}
           scoreTarget={scoreTarget}
         />

@@ -5,7 +5,8 @@ export type { CupId, CupOrder, Difficulty, Rng, SlotIndex, Swap } from './shuffl
 
 export const CUP_COUNT = 3
 export const INITIAL_LIVES = 3
-export const HITS_FOR_LIFE = 2
+export const HITS_PER_LIFE = 5
+export type HitsTowardLife = 0 | 1 | 2 | 3 | 4
 
 export type GameEvent = 'hit' | 'miss' | 'extraLife' | 'gameOver'
 export type GamePhase = 'preview' | 'covering' | 'shuffling' | 'guessing' | 'revealing' | 'roundEnd' | 'gameOver'
@@ -13,7 +14,7 @@ export type GamePhase = 'preview' | 'covering' | 'shuffling' | 'guessing' | 'rev
 export interface GameState {
   readonly score: number
   readonly lives: number
-  readonly hitsTowardLife: 0 | 1
+  readonly hitsTowardLife: HitsTowardLife
   readonly luizaCupId: CupId
   readonly order: CupOrder
   readonly swaps: readonly Swap[]
@@ -66,13 +67,13 @@ export function resumeGame(state: GameState, rng: Rng = Math.random): GameState 
 export function chooseCup(state: GameState, cupId: CupId): { state: GameState; events: GameEvent[] } {
   if (state.phase !== 'guessing') return { state, events: [] }
   if (cupId === state.luizaCupId) {
-    const extraLife = state.hitsTowardLife + 1 === HITS_FOR_LIFE
+    const extraLife = state.hitsTowardLife + 1 === HITS_PER_LIFE
     return {
       state: {
         ...state,
         score: state.score + 1,
         lives: state.lives + (extraLife ? 1 : 0),
-        hitsTowardLife: extraLife ? 0 : 1,
+        hitsTowardLife: extraLife ? 0 : ((state.hitsTowardLife + 1) as HitsTowardLife),
         phase: 'revealing',
         lastGuess: cupId,
       },

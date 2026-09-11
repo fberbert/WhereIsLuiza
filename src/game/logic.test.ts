@@ -154,14 +154,27 @@ describe('guesses and accumulated rewards', () => {
     expect(chooseCup(state, 1).events).toEqual(['miss'])
   })
 
-  it('acerto, erro, acerto earns one extra life without resetting progress on the miss', () => {
+  it('awards a life only on the fifth accumulated hit and preserves progress on a miss', () => {
     const hit = chooseCup(ready(), 0).state
     const miss = chooseCup(ready(nextRound(endRound(hit), rng)), 1)
     expect(miss.state).toMatchObject({ score: 1, lives: 2, hitsTowardLife: 1 })
     expect(miss.events).toEqual(['miss'])
     const secondHit = chooseCup(ready(nextRound(endRound(miss.state), rng)), 0)
-    expect(secondHit.state).toMatchObject({ score: 2, lives: 3, hitsTowardLife: 0 })
-    expect(secondHit.events).toEqual(['hit', 'extraLife'])
+    expect(secondHit.state).toMatchObject({ score: 2, lives: 2, hitsTowardLife: 2 })
+    expect(secondHit.events).toEqual(['hit'])
+    let previous = secondHit.state
+    for (const score of [3, 4, 5]) {
+      const result = chooseCup(ready(nextRound(endRound(previous), rng)), 0)
+      expect(result.state).toMatchObject({ score, lives: score === 5 ? 3 : 2, hitsTowardLife: score % 5 })
+      expect(result.events).toEqual(score === 5 ? ['hit', 'extraLife'] : ['hit'])
+      expect(chooseCup(result.state, 0)).toEqual({ state: result.state, events: [] })
+      previous = result.state
+    }
+    const resumed = resumeGame(previous)
+    expect(resumed).toMatchObject({ lives: 3, score: 5, hitsTowardLife: 0 })
+    const sixth = chooseCup(ready(nextRound(resumed, rng)), 0)
+    expect(sixth.state).toMatchObject({ lives: 3, score: 6, hitsTowardLife: 1 })
+    expect(sixth.events).toEqual(['hit'])
   })
 
   it('reveals the last miss before entering game over', () => {

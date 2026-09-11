@@ -1,19 +1,22 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { colors, fonts } from '../theme'
+import { HITS_PER_LIFE, type GameState } from '../game/logic'
 
 interface Props {
-  count: 0 | 1
+  count: GameState['hitsTowardLife']
   earned?: boolean
   reducedMotion?: boolean
 }
 
 export function ExtraLifeProgress({ count, earned = false }: Props) {
-  const completed = earned ? 2 : count
+  const completed = earned ? HITS_PER_LIFE : count
   return (
     <View style={styles.row}>
-      <Text style={styles.label}>Vida extra: {completed}/2</Text>
-      {[0, 1].map(index => (
+      <Text style={styles.label}>
+        Vida extra: {completed}/{HITS_PER_LIFE}
+      </Text>
+      {Array.from({ length: HITS_PER_LIFE }, (_, index) => (
         <View
           key={index}
           testID="extra-life-indicator"
@@ -27,7 +30,7 @@ export function ExtraLifeProgress({ count, earned = false }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, minHeight: 22 },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, minHeight: 22 },
   label: { color: colors.white, fontFamily: fonts.body, fontSize: 13, marginRight: 3 },
   indicator: {
     width: 10,

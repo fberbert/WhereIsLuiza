@@ -11,8 +11,12 @@ Android, landscape. React Native 0.87 (Hermes, New Architecture), TypeScript.
 3. Quando todos pararem, toque em um copo para escolher.
 4. Depois da revelação, toque em **Próxima rodada** para continuar.
 
-Cada acerto vale um ponto. A cada dois acertos acumulados, você ganha uma vida; um erro entre eles
-não apaga o progresso. Por exemplo: acerto, erro, acerto ainda rende uma vida extra.
+Cada troca dos copos tem um efeito curto de deslizamento e toque, sincronizado
+com o movimento. O botão de efeitos sonoros também controla esse som.
+O áudio é sintetizado pelo script `scripts/generate_shuffle_sound.py`.
+
+Cada acerto vale um ponto. A cada cinco acertos acumulados, você ganha uma vida; erros entre eles
+não apagam o progresso.
 O jogo começa com três vidas e cada erro custa uma. Ao chegar a zero, a Luiza é revelada antes do fim de jogo.
 
 As vidas podem continuar aumentando. A tela mostra até cinco corações e indica as vidas restantes com

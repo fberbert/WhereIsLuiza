@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { newGame, resumeGame, type CupId, type CupOrder, type Swap, type GameState } from '../game/logic'
+import { HITS_PER_LIFE, newGame, resumeGame, type CupId, type CupOrder, type Swap, type GameState } from '../game/logic'
 import { applySwap, difficultyForScore } from '../game/shuffle'
 import { loadJson } from './persist'
 
@@ -17,14 +17,16 @@ function cup(value: unknown): value is CupId {
   return value === 0 || value === 1 || value === 2
 }
 
-function totals(value: Record<string, unknown>, hits: unknown): boolean {
-  return integer(value.score) && integer(value.lives) && (hits === 0 || hits === 1)
+function totals(value: Record<string, unknown>): boolean {
+  return integer(value.score) && integer(value.lives)
 }
 
 function validState(value: unknown): value is GameState {
   if (
     !record(value) ||
-    !totals(value, value.hitsTowardLife) ||
+    !totals(value) ||
+    !integer(value.hitsTowardLife) ||
+    value.hitsTowardLife >= HITS_PER_LIFE ||
     !integer(value.roundId) ||
     !cup(value.luizaCupId) ||
     !integer(value.swapIndex)
@@ -65,7 +67,13 @@ function validState(value: unknown): value is GameState {
 }
 
 function migrate(value: Record<string, unknown>): GameState | null {
-  if (!totals(value, value.streak) || !cup(value.luizaAt) || typeof value.gameOver !== 'boolean') return null
+  if (
+    !totals(value) ||
+    (value.streak !== 0 && value.streak !== 1) ||
+    !cup(value.luizaAt) ||
+    typeof value.gameOver !== 'boolean'
+  )
+    return null
   const judged = value.phase === 'revealed'
   if (value.phase !== 'closed' && !judged) return null
   if (judged ? !cup(value.lastGuess) : value.lastGuess !== null) return null

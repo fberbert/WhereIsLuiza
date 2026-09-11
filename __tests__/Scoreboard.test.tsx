@@ -90,26 +90,26 @@ it.each(['gained', 'lost'] as const)('briefly pulses lives when %s and cleans up
   expect(stop).toHaveBeenCalledTimes(1)
 })
 
-it.each([0, 1] as const)('shows %i of two hits toward the extra life', count => {
+it.each([0, 1, 4] as const)('shows %i of five hits toward the extra life', count => {
   const tree = render(<ExtraLifeProgress count={count} />)
-  expect(texts(tree)).toContain(`Vida extra: ${count}/2`)
+  expect(texts(tree)).toContain(`Vida extra: ${count}/5`)
   const indicators = tree.root.findAllByType(View).filter(node => node.props.testID === 'extra-life-indicator')
-  expect(indicators).toHaveLength(2)
+  expect(indicators).toHaveLength(5)
   expect(indicators.filter(node => node.props.accessibilityLabel === 'Acerto conquistado')).toHaveLength(count)
-  expect(indicators.filter(node => node.props.accessibilityLabel === 'Acerto pendente')).toHaveLength(2 - count)
+  expect(indicators.filter(node => node.props.accessibilityLabel === 'Acerto pendente')).toHaveLength(5 - count)
 })
 
-it('shows two filled indicators on earning a life until the parent resets feedback', () => {
+it('shows five filled indicators on earning a life until the parent resets feedback', () => {
   const tree = render(<ExtraLifeProgress count={0} earned reducedMotion />)
-  expect(texts(tree)).toContain('Vida extra: 2/2')
+  expect(texts(tree)).toContain('Vida extra: 5/5')
   expect(
     tree.root.findAllByType(View).filter(node => node.props.accessibilityLabel === 'Acerto conquistado'),
-  ).toHaveLength(2)
+  ).toHaveLength(5)
   act(() => tree.update(<ExtraLifeProgress count={0} earned={false} />))
-  expect(texts(tree)).toContain('Vida extra: 0/2')
+  expect(texts(tree)).toContain('Vida extra: 0/5')
   expect(
     tree.root.findAllByType(View).filter(node => node.props.accessibilityLabel === 'Acerto pendente'),
-  ).toHaveLength(2)
+  ).toHaveLength(5)
 })
 
 it('keeps extra-life progress when a life is lost', () => {
@@ -127,5 +127,5 @@ it('keeps extra-life progress when a life is lost', () => {
       </View>,
     ),
   )
-  expect(texts(tree)).toContain('Vida extra: 1/2')
+  expect(texts(tree)).toContain('Vida extra: 1/5')
 })

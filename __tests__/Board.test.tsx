@@ -15,6 +15,8 @@ let stop: jest.Mock
 const choose = jest.fn()
 const end = jest.fn()
 const resize = jest.fn()
+const stopShuffle = jest.fn()
+const shuffleStart = jest.fn(() => stopShuffle)
 const props = (game = initial(), patch = {}) => ({
   game,
   enabled: true,
@@ -22,6 +24,7 @@ const props = (game = initial(), patch = {}) => ({
   onChoose: choose,
   onAnimationEnd: end,
   onResize: resize,
+  onShuffleStart: shuffleStart,
   scoreTarget: null,
   generation: 0,
   ...patch,
@@ -43,6 +46,8 @@ beforeEach(() => {
   choose.mockClear()
   end.mockClear()
   resize.mockClear()
+  shuffleStart.mockClear()
+  stopShuffle.mockClear()
   jest.spyOn(Animated, 'timing').mockImplementation((_value, _config) => ({
     start: callback => {
       if (callback) complete.push(callback)
@@ -224,4 +229,26 @@ it.each([false, true])('keeps native animated properties mapped through rounds (
       }
     })
   })
+})
+
+it('plays only measured enabled swaps and cancels audio on completion or pause', () => {
+  const game = initial({ phase: 'shuffling' })
+  mount(game)
+  expect(shuffleStart).not.toHaveBeenCalled()
+  layout()
+  expect(shuffleStart).toHaveBeenCalledWith(650)
+  act(() => complete[0]({ finished: true }))
+  expect(stopShuffle).toHaveBeenCalledTimes(1)
+  act(() => tree.update(<Board {...props({ ...game, swapIndex: 1 })} />))
+  expect(shuffleStart).toHaveBeenCalledTimes(2)
+  act(() => tree.update(<Board {...props({ ...game, swapIndex: 1 }, { enabled: false })} />))
+  expect(stopShuffle).toHaveBeenCalled()
+  const count = shuffleStart.mock.calls.length
+  act(() => tree.update(<Board {...props(initial({ phase: 'preview' }))} />))
+  expect(shuffleStart).toHaveBeenCalledTimes(count)
+})
+it('uses the reduced-motion duration for the shuffle sound', () => {
+  mount(initial({ phase: 'shuffling' }), { reducedMotion: true })
+  layout()
+  expect(shuffleStart).toHaveBeenCalledWith(700)
 })
